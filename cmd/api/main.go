@@ -2,30 +2,45 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net/http"
+
+	"org-structure-api/internal/handler"
+	"org-structure-api/internal/models"
+	"org-structure-api/internal/repository"
+	"org-structure-api/internal/service"
+
+	"github.com/gorilla/mux"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"log"
 )
 
 func main() {
-	// Подключение к PostgreSQL через Docker Toolbox
+	// Подключение к БД
 	dsn := "host=192.168.99.100 user=postgres password=postgres dbname=org_structure port=5432 sslmode=disable TimeZone=UTC"
-
-	fmt.Println("Connecting to database...")
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("Failed to connect DB: %v", err)
 	}
+	fmt.Println("Connected to database")
 
-	fmt.Println("Connected to database successfully!")
-
-	// Получаем базовую информацию о подключении
-	sqlDB, _ := db.DB()
-	if err := sqlDB.Ping(); err != nil {
-		log.Fatalf("Database ping failed: %v", err)
+	// Миграции
+	if err := db.AutoMigrate(&models.Department{}, &models.Employee{}); err != nil {
+		log.Fatalf("Migration failed: %v", err)
 	}
+	fmt.Println("Migrations done")
 
-	fmt.Println("Database ping successful!")
-	fmt.Println("API server ready to start...")
+	// Инициализация слоёв
+	deptRepo := repository.NewDepartmentRepository(db)
+	deptService := service.NewDepartmentService(deptRepo)
+	deptHandler := handler.NewDepartmentHandler(deptService)
+
+	// Роутер
+	r := mux.NewRouter()
+	r.HandleFunc("/departments", deptHandler.CreateDepartment).Methods("POST")
+
+	// Запуск
+	fmt.Println("Server starting on :8080")
+	log.Fatal(http.ListenAndServe(":8080", r))
 }

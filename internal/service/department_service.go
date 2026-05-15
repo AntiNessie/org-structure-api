@@ -37,6 +37,13 @@ func (s *departmentService) Create(name string, parentID *uint) (*models.Departm
 		return nil, ErrNameRequired
 	}
 
+	// Проверка уникальности имени
+	var count int64
+	s.deptRepo.DB().Model(&models.Department{}).Where("name = ? AND parent_id = ?", name, parentID).Count(&count)
+	if count > 0 {
+		return nil, errors.New("department name already exists in this parent")
+	}
+
 	department := &models.Department{
 		Name:     name,
 		ParentID: parentID,
@@ -67,7 +74,6 @@ func (s *departmentService) GetByID(id uint, includeEmployees bool) (*models.Dep
 }
 
 func (s *departmentService) Update(id uint, name *string, parentID *uint) (*models.Department, error) {
-
 	dept, err := s.deptRepo.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -105,7 +111,6 @@ func (s *departmentService) Update(id uint, name *string, parentID *uint) (*mode
 }
 
 func (s *departmentService) Delete(id uint, mode string, reassignToID *uint) error {
-
 	dept, err := s.deptRepo.GetByID(id)
 	if err != nil {
 		return err
@@ -115,11 +120,9 @@ func (s *departmentService) Delete(id uint, mode string, reassignToID *uint) err
 	}
 
 	if mode == "cascade" {
-		// Удаляем всех сотрудников отдела
 		if err := s.empRepo.DeleteByDepartmentID(id); err != nil {
 			return err
 		}
-		// Удаляем отдел
 		return s.deptRepo.Delete(id)
 	}
 
@@ -127,6 +130,7 @@ func (s *departmentService) Delete(id uint, mode string, reassignToID *uint) err
 		if reassignToID == nil {
 			return errors.New("reassign_to_department_id is required")
 		}
+
 		targetDept, err := s.deptRepo.GetByID(*reassignToID)
 		if err != nil {
 			return err
@@ -140,8 +144,6 @@ func (s *departmentService) Delete(id uint, mode string, reassignToID *uint) err
 			return err
 		}
 
-		// Обновляем department_id у каждого сотрудника
-
 		for _, emp := range employees {
 			emp.DepartmentID = *reassignToID
 			if err := s.empRepo.Create(&emp); err != nil {
@@ -149,7 +151,6 @@ func (s *departmentService) Delete(id uint, mode string, reassignToID *uint) err
 			}
 		}
 
-		// Удаляем отдел
 		return s.deptRepo.Delete(id)
 	}
 

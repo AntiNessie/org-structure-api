@@ -13,6 +13,7 @@ type DepartmentRepository interface {
 	GetByIDWithEmployees(id uint) (*models.Department, error)
 	Update(dept *models.Department) error
 	Delete(id uint) error
+	DB() *gorm.DB
 }
 
 type departmentRepository struct {
@@ -54,4 +55,8 @@ func (r *departmentRepository) Update(dept *models.Department) error {
 
 func (r *departmentRepository) Delete(id uint) error {
 	return r.db.Delete(&models.Department{}, id).Error
+}
+
+func (r *departmentRepository) DB() *gorm.DB {
+	return r.db
 }

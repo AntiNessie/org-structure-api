@@ -30,7 +30,7 @@ func NewEmployeeService(empRepo repository.EmployeeRepository, deptRepo reposito
 }
 
 func (s *employeeService) Create(departmentID uint, fullName, position string, hiredAt *time.Time) (*models.Employee, error) {
-
+	// Проверяем существует ли отдел
 	dept, err := s.deptRepo.GetByID(departmentID)
 	if err != nil {
 		return nil, err
@@ -39,11 +39,13 @@ func (s *employeeService) Create(departmentID uint, fullName, position string, h
 		return nil, ErrDepartmentNotFound
 	}
 
+	// Валидация full_name
 	fullName = strings.TrimSpace(fullName)
 	if len(fullName) == 0 || len(fullName) > 200 {
 		return nil, ErrEmployeeNameRequired
 	}
 
+	// Валидация position
 	position = strings.TrimSpace(position)
 	if len(position) == 0 || len(position) > 200 {
 		return nil, ErrPositionRequired

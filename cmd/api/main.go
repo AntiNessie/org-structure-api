@@ -33,12 +33,19 @@ func main() {
 
 	// Инициализация слоёв
 	deptRepo := repository.NewDepartmentRepository(db)
+	empRepo := repository.NewEmployeeRepository(db)
+
 	deptService := service.NewDepartmentService(deptRepo)
+	empService := service.NewEmployeeService(empRepo, deptRepo)
+
 	deptHandler := handler.NewDepartmentHandler(deptService)
+	empHandler := handler.NewEmployeeHandler(empService)
 
 	// Роутер
 	r := mux.NewRouter()
 	r.HandleFunc("/departments", deptHandler.CreateDepartment).Methods("POST")
+	r.HandleFunc("/departments/{id}", deptHandler.GetDepartment).Methods("GET")
+	r.HandleFunc("/departments/{id}/employees", empHandler.CreateEmployee).Methods("POST")
 
 	// Запуск
 	fmt.Println("Server starting on :8080")

@@ -16,14 +16,19 @@ type DepartmentService interface {
 	Create(name string, parentID *uint) (*models.Department, error)
 	GetByID(id uint, includeEmployees bool) (*models.Department, error)
 	Update(id uint, name *string, parentID *uint) (*models.Department, error)
+	Delete(id uint, mode string, reassignToID *uint) error
 }
 
 type departmentService struct {
 	deptRepo repository.DepartmentRepository
+	empRepo  repository.EmployeeRepository
 }
 
-func NewDepartmentService(deptRepo repository.DepartmentRepository) DepartmentService {
-	return &departmentService{deptRepo: deptRepo}
+func NewDepartmentService(deptRepo repository.DepartmentRepository, empRepo repository.EmployeeRepository) DepartmentService {
+	return &departmentService{
+		deptRepo: deptRepo,
+		empRepo:  empRepo,
+	}
 }
 
 func (s *departmentService) Create(name string, parentID *uint) (*models.Department, error) {
@@ -80,7 +85,6 @@ func (s *departmentService) Update(id uint, name *string, parentID *uint) (*mode
 	}
 
 	if parentID != nil {
-
 		if *parentID > 0 {
 			parent, err := s.deptRepo.GetByID(*parentID)
 			if err != nil {
@@ -89,7 +93,6 @@ func (s *departmentService) Update(id uint, name *string, parentID *uint) (*mode
 			if parent == nil {
 				return nil, errors.New("parent department not found")
 			}
-
 			if *parentID == id {
 				return nil, errors.New("cannot set department as its own parent")
 			}
@@ -99,4 +102,56 @@ func (s *departmentService) Update(id uint, name *string, parentID *uint) (*mode
 
 	err = s.deptRepo.Update(dept)
 	return dept, err
+}
+
+func (s *departmentService) Delete(id uint, mode string, reassignToID *uint) error {
+
+	dept, err := s.deptRepo.GetByID(id)
+	if err != nil {
+		return err
+	}
+	if dept == nil {
+		return ErrDepartmentNotFound
+	}
+
+	if mode == "cascade" {
+		// Удаляем всех сотрудников отдела
+		if err := s.empRepo.DeleteByDepartmentID(id); err != nil {
+			return err
+		}
+		// Удаляем отдел
+		return s.deptRepo.Delete(id)
+	}
+
+	if mode == "reassign" {
+		if reassignToID == nil {
+			return errors.New("reassign_to_department_id is required")
+		}
+		targetDept, err := s.deptRepo.GetByID(*reassignToID)
+		if err != nil {
+			return err
+		}
+		if targetDept == nil {
+			return errors.New("target department not found")
+		}
+
+		employees, err := s.empRepo.GetByDepartmentID(id)
+		if err != nil {
+			return err
+		}
+
+		// Обновляем department_id у каждого сотрудника
+
+		for _, emp := range employees {
+			emp.DepartmentID = *reassignToID
+			if err := s.empRepo.Create(&emp); err != nil {
+				return err
+			}
+		}
+
+		// Удаляем отдел
+		return s.deptRepo.Delete(id)
+	}
+
+	return errors.New("mode must be 'cascade' or 'reassign'")
 }

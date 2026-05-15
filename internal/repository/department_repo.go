@@ -12,6 +12,7 @@ type DepartmentRepository interface {
 	GetByID(id uint) (*models.Department, error)
 	GetByIDWithEmployees(id uint) (*models.Department, error)
 	Update(dept *models.Department) error
+	Delete(id uint) error
 }
 
 type departmentRepository struct {
@@ -49,4 +50,8 @@ func (r *departmentRepository) GetByIDWithEmployees(id uint) (*models.Department
 
 func (r *departmentRepository) Update(dept *models.Department) error {
 	return r.db.Save(dept).Error
+}
+
+func (r *departmentRepository) Delete(id uint) error {
+	return r.db.Delete(&models.Department{}, id).Error
 }

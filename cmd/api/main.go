@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"org-structure-api/internal/handler"
-	"org-structure-api/internal/models"
 	"org-structure-api/internal/repository"
 	"org-structure-api/internal/service"
 
@@ -25,11 +24,11 @@ func main() {
 	}
 	fmt.Println("Connected to database")
 
-	// Миграции
+	/* Миграции (старые)
 	if err := db.AutoMigrate(&models.Department{}, &models.Employee{}); err != nil {
 		log.Fatalf("Migration failed: %v", err)
 	}
-	fmt.Println("Migrations done")
+	fmt.Println("Migrations done") */
 
 	// Инициализация слоёв
 	deptRepo := repository.NewDepartmentRepository(db)

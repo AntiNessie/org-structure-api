@@ -11,6 +11,7 @@ type DepartmentRepository interface {
 	Create(dept *models.Department) error
 	GetByID(id uint) (*models.Department, error)
 	GetByIDWithEmployees(id uint) (*models.Department, error)
+	Update(dept *models.Department) error
 }
 
 type departmentRepository struct {
@@ -44,4 +45,8 @@ func (r *departmentRepository) GetByIDWithEmployees(id uint) (*models.Department
 		return nil, err
 	}
 	return &dept, nil
+}
+
+func (r *departmentRepository) Update(dept *models.Department) error {
+	return r.db.Save(dept).Error
 }

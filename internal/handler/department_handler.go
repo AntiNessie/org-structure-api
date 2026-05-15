@@ -22,6 +22,11 @@ type createDepartmentRequest struct {
 	ParentID *uint  `json:"parent_id,omitempty"`
 }
 
+type updateDepartmentRequest struct {
+	Name     *string `json:"name,omitempty"`
+	ParentID *uint   `json:"parent_id,omitempty"`
+}
+
 func (h *DepartmentHandler) CreateDepartment(w http.ResponseWriter, r *http.Request) {
 	var req createDepartmentRequest
 
@@ -58,6 +63,37 @@ func (h *DepartmentHandler) GetDepartment(w http.ResponseWriter, r *http.Request
 			http.Error(w, err.Error(), http.StatusNotFound)
 		default:
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(dept)
+}
+
+func (h *DepartmentHandler) UpdateDepartment(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.ParseUint(vars["id"], 10, 32)
+	if err != nil {
+		http.Error(w, "Invalid department ID", http.StatusBadRequest)
+		return
+	}
+
+	var req updateDepartmentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	dept, err := h.service.Update(uint(id), req.Name, req.ParentID)
+	if err != nil {
+		switch err {
+		case service.ErrDepartmentNotFound:
+			http.Error(w, err.Error(), http.StatusNotFound)
+		case service.ErrNameRequired:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		default:
+			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
 		return
 	}

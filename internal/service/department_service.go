@@ -15,6 +15,7 @@ var (
 type DepartmentService interface {
 	Create(name string, parentID *uint) (*models.Department, error)
 	GetByID(id uint, includeEmployees bool) (*models.Department, error)
+	Update(id uint, name *string, parentID *uint) (*models.Department, error)
 }
 
 type departmentService struct {
@@ -58,4 +59,44 @@ func (s *departmentService) GetByID(id uint, includeEmployees bool) (*models.Dep
 	}
 
 	return dept, nil
+}
+
+func (s *departmentService) Update(id uint, name *string, parentID *uint) (*models.Department, error) {
+
+	dept, err := s.deptRepo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if dept == nil {
+		return nil, ErrDepartmentNotFound
+	}
+
+	if name != nil {
+		newName := strings.TrimSpace(*name)
+		if len(newName) == 0 || len(newName) > 200 {
+			return nil, ErrNameRequired
+		}
+		dept.Name = newName
+	}
+
+	if parentID != nil {
+
+		if *parentID > 0 {
+			parent, err := s.deptRepo.GetByID(*parentID)
+			if err != nil {
+				return nil, err
+			}
+			if parent == nil {
+				return nil, errors.New("parent department not found")
+			}
+
+			if *parentID == id {
+				return nil, errors.New("cannot set department as its own parent")
+			}
+		}
+		dept.ParentID = parentID
+	}
+
+	err = s.deptRepo.Update(dept)
+	return dept, err
 }
